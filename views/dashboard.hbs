@@ -1,0 +1,143 @@
+<div class="page-header">
+  <h1>📊 Panell de control</h1>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="mostraTab('kpi', this)">KPI</button>
+  <button class="tab-btn" onclick="mostraTab('llistats', this)">Llistats</button>
+</div>
+
+<!-- TAB KPI -->
+<div id="tab-kpi" class="tab-content active">
+  <div class="tab-toolbar">
+    <button class="btn btn-toggle" id="btn-compacte" onclick="toggleCompacte()">🗜️ Mode compacte</button>
+  </div>
+
+  <div id="tauler-kpi" class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon">💰</div>
+      <div class="kpi-info">
+        <div class="kpi-valor">{{vendesTotalsAvui}} €</div>
+        <div class="kpi-label">Vendes avui</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">📅</div>
+      <div class="kpi-info">
+        <div class="kpi-valor">{{vendesTotalsMes}} €</div>
+        <div class="kpi-label">Vendes del mes</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">🛒</div>
+      <div class="kpi-info">
+        <div class="kpi-valor">{{comandesAvui}}</div>
+        <div class="kpi-label">Comandes avui</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">📦</div>
+      <div class="kpi-info">
+        <div class="kpi-valor">{{comandesMes}}</div>
+        <div class="kpi-label">Comandes del mes</div>
+      </div>
+    </div>
+    <div class="kpi-card {{#if (gt stockBaix 0)}}kpi-alerta{{/if}}">
+      <div class="kpi-icon">⚠️</div>
+      <div class="kpi-info">
+        <div class="kpi-valor">{{stockBaix}}</div>
+        <div class="kpi-label">Productes stock baix</div>
+      </div>
+    </div>
+  </div>
+
+  {{#if productesBaix}}
+  <div class="kpi-detail" id="kpi-stock-detall">
+    <h3>Productes amb stock baix o crític</h3>
+    <table class="taula">
+      <thead>
+        <tr><th>Producte</th><th>Stock</th><th>Estat</th></tr>
+      </thead>
+      <tbody>
+        {{#each productesBaix}}
+        <tr>
+          <td>{{name}}</td>
+          <td>{{stock}}</td>
+          <td><span class="badge badge-{{stockClass stock}}">{{stockLabel stock}}</span></td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{/if}}
+</div>
+
+<!-- TAB LLISTATS -->
+<div id="tab-llistats" class="tab-content">
+  <div class="tab-toolbar">
+    <button class="btn btn-toggle" id="btn-colors" onclick="toggleColors(this)">🎨 Colors stock</button>
+  </div>
+
+  <div class="llistats-grid">
+    <div class="card">
+      <h3>🕐 Últimes 5 vendes</h3>
+      <table class="taula">
+        <thead>
+          <tr><th>#</th><th>Data</th><th>Client</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          {{#each ultimesVendes}}
+          <tr>
+            <td><a href="/vendaDetall?id={{id}}">#{{id}}</a></td>
+            <td>{{formatDate sale_date}}</td>
+            <td>{{clientNom}}</td>
+            <td><strong>{{formatPrice total}}</strong></td>
+          </tr>
+          {{else}}
+          <tr><td colspan="4" class="buit">No hi ha vendes encara</td></tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>🏆 Top 5 productes venuts</h3>
+      <table class="taula" id="taula-top-productes">
+        <thead>
+          <tr><th>Producte</th><th>Unitats</th></tr>
+        </thead>
+        <tbody>
+          {{#each topProductes}}
+          <tr>
+            <td>{{name}}</td>
+            <td><strong>{{totalVenuts}}</strong></td>
+          </tr>
+          {{else}}
+          <tr><td colspan="2" class="buit">Sense dades</td></tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function mostraTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+function toggleCompacte() {
+  const tauler = document.getElementById('tauler-kpi');
+  const detall = document.getElementById('kpi-stock-detall');
+  const btn = document.getElementById('btn-compacte');
+  const compacte = tauler.classList.toggle('kpi-compacte');
+  if (detall) detall.style.display = compacte ? 'none' : '';
+  btn.textContent = compacte ? '🔲 Mode complet' : '🗜️ Mode compacte';
+}
+function toggleColors(btn) {
+  document.body.classList.toggle('colors-stock');
+  btn.classList.toggle('actiu');
+}
+</script>

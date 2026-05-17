@@ -1,0 +1,49 @@
+<div class="page-header">
+  <h1>✏️ Editar client</h1>
+  <a href="/clients" class="btn btn-sec">← Tornar</a>
+</div>
+
+<div class="card form-card">
+  <form id="form-client" method="POST" action="/update" novalidate>
+    <input type="hidden" name="taula" value="customers">
+    <input type="hidden" name="id" value="{{client.id}}">
+
+    <div class="form-grup">
+      <label for="name">Nom <span class="obligatori">*</span></label>
+      <input type="text" id="name" name="name" class="form-control" value="{{client.name}}">
+      <span class="error-msg" id="err-name"></span>
+    </div>
+
+    <div class="form-grup">
+      <label for="email">Email <span class="obligatori">*</span></label>
+      <input type="email" id="email" name="email" class="form-control" value="{{client.email}}">
+      <span class="error-msg" id="err-email"></span>
+    </div>
+
+    <div class="form-grup">
+      <label for="phone">Telèfon <span class="obligatori">*</span></label>
+      <input type="tel" id="phone" name="phone" class="form-control" value="{{client.phone}}">
+      <span class="error-msg" id="err-phone"></span>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">💾 Desar canvis</button>
+      <a href="/clients" class="btn btn-sec">Cancel·lar</a>
+    </div>
+  </form>
+
+  <hr class="separador">
+
+  <form method="POST" action="/delete" onsubmit="return confirm('Segur que vols esborrar aquest client?')">
+    <input type="hidden" name="taula" value="customers">
+    <input type="hidden" name="id" value="{{client.id}}">
+    <button type="submit" class="btn btn-danger">🗑️ Esborrar client</button>
+  </form>
+</div>
+
+<script src="/js/validacio.js"></script>
+<script>
+document.getElementById('form-client').addEventListener('submit', function(e) {
+  if (!validaClient()) e.preventDefault();
+});
+</script>

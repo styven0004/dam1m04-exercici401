@@ -1,0 +1,68 @@
+<div class="page-header">
+  <h1>➕ Afegir producte</h1>
+  <a href="/productes" class="btn btn-sec">← Tornar</a>
+</div>
+
+<div class="card form-card">
+  <form id="form-producte" method="POST" action="/create" novalidate>
+    <input type="hidden" name="taula" value="products">
+
+    <div class="form-grup">
+      <label for="name">Nom <span class="obligatori">*</span></label>
+      <input type="text" id="name" name="name" class="form-control" placeholder="Nom del joc...">
+      <span class="error-msg" id="err-name"></span>
+    </div>
+
+    <div class="form-grup">
+      <label for="category">Categoria <span class="obligatori">*</span></label>
+      <select id="category" name="category" class="form-control">
+        <option value="">-- Selecciona categoria --</option>
+        <option value="Acció">Acció</option>
+        <option value="Aventura">Aventura</option>
+        <option value="RPG">RPG</option>
+        <option value="Plataformes">Plataformes</option>
+        <option value="Shooter">Shooter</option>
+        <option value="Esports">Esports</option>
+        <option value="Lluita">Lluita</option>
+        <option value="Terror">Terror</option>
+        <option value="Racing">Racing</option>
+        <option value="Estratègia">Estratègia</option>
+        <option value="Ritme">Ritme</option>
+        <option value="Altre">Altre</option>
+      </select>
+      <span class="error-msg" id="err-category"></span>
+    </div>
+
+    <div class="form-row">
+      <div class="form-grup">
+        <label for="price">Preu (€) <span class="obligatori">*</span></label>
+        <input type="number" id="price" name="price" class="form-control" min="0.01" step="0.01" placeholder="0.00">
+        <span class="error-msg" id="err-price"></span>
+      </div>
+      <div class="form-grup">
+        <label for="stock">Stock <span class="obligatori">*</span></label>
+        <input type="number" id="stock" name="stock" class="form-control" min="0" step="1" placeholder="0">
+        <span class="error-msg" id="err-stock"></span>
+      </div>
+    </div>
+
+    <div class="form-grup form-grup-check">
+      <label class="check-label">
+        <input type="checkbox" id="active" name="active" value="1" checked>
+        <span>Producte actiu</span>
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">💾 Desar producte</button>
+      <a href="/productes" class="btn btn-sec">Cancel·lar</a>
+    </div>
+  </form>
+</div>
+
+<script src="/js/validacio.js"></script>
+<script>
+document.getElementById('form-producte').addEventListener('submit', function(e) {
+  if (!validaProducte()) e.preventDefault();
+});
+</script>

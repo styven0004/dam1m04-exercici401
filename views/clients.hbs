@@ -1,0 +1,54 @@
+<div class="page-header">
+  <h1>👥 Clients</h1>
+  <a href="/clientAfegir" class="btn btn-primary">+ Afegir client</a>
+</div>
+
+<div class="filtres-bar">
+  <form method="GET" action="/clients" class="cerca-form">
+    <input type="text" name="cerca" value="{{cerca}}" placeholder="Cerca per nom o email..." class="input-cerca">
+    {{#if soloVip}}<input type="hidden" name="vip" value="1">{{/if}}
+    <button type="submit" class="btn btn-primary">Cercar</button>
+    {{#if cerca}}<a href="/clients{{#if soloVip}}?vip=1{{/if}}" class="btn btn-sec">✕ Netejar</a>{{/if}}
+  </form>
+  <a href="/clients?vip=1{{#if cerca}}&cerca={{cerca}}{{/if}}" class="btn btn-toggle {{#if soloVip}}actiu{{/if}}">⭐ Només VIP</a>
+</div>
+
+<p class="resum">{{total}} client(s) trobat(s)</p>
+
+<div class="card">
+  <table class="taula">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Nom</th>
+        <th>Email</th>
+        <th>Telèfon</th>
+        <th>Compres</th>
+        <th>Total gastat</th>
+        <th>VIP</th>
+        <th>Accions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each clients}}
+      <tr>
+        <td>{{id}}</td>
+        <td><strong>{{name}}</strong></td>
+        <td><a href="mailto:{{email}}">{{email}}</a></td>
+        <td>{{phone}}</td>
+        <td>{{numCompres}}</td>
+        <td>{{formatPrice totalGastat}}</td>
+        <td>{{#if esVip}}⭐ VIP{{/if}}</td>
+        <td>
+          <a href="/clientFitxa?id={{id}}" class="btn btn-sm btn-info">👁 Fitxa</a>
+          <a href="/clientEditar?id={{id}}" class="btn btn-sm btn-sec">✏️ Editar</a>
+        </td>
+      </tr>
+      {{else}}
+      <tr><td colspan="8" class="buit">No s'han trobat clients</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+{{> paginacio}}

@@ -1,0 +1,17 @@
+{{#if (gt totalPagines 1)}}
+<nav class="paginacio">
+  {{#if hiHaPaginaAnterior}}
+    <a href="?pagina={{paginaAnterior}}{{#if cerca}}&cerca={{cerca}}{{/if}}{{#if soloVip}}&vip=1{{/if}}" class="btn btn-sec">← Anterior</a>
+  {{else}}
+    <span class="btn btn-sec disabled">← Anterior</span>
+  {{/if}}
+
+  <span class="paginacio-info">Pàgina {{add pagina 1}} de {{totalPagines}}</span>
+
+  {{#if hiHaPaginaSeguent}}
+    <a href="?pagina={{paginaSeguent}}{{#if cerca}}&cerca={{cerca}}{{/if}}{{#if soloVip}}&vip=1{{/if}}" class="btn btn-sec">Següent →</a>
+  {{else}}
+    <span class="btn btn-sec disabled">Següent →</span>
+  {{/if}}
+</nav>
+{{/if}}

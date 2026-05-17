@@ -1,0 +1,65 @@
+<div class="page-header">
+  <h1>👤 {{client.name}}</h1>
+  <div>
+    <a href="/clientEditar?id={{client.id}}" class="btn btn-sec">✏️ Editar</a>
+    <a href="/clients" class="btn btn-sec">← Tornar</a>
+  </div>
+</div>
+
+<div class="fitxa-grid">
+  <div class="card">
+    <h3>Dades del client</h3>
+    <dl class="dades-list">
+      <dt>Nom</dt><dd>{{client.name}} {{#if client.esVip}}<span class="badge badge-vip">⭐ VIP</span>{{/if}}</dd>
+      <dt>Email</dt><dd><a href="mailto:{{client.email}}">{{client.email}}</a></dd>
+      <dt>Telèfon</dt><dd>{{client.phone}}</dd>
+      <dt>Registrat</dt><dd>{{formatDate client.created_at}}</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>Resum econòmic</h3>
+    <div class="kpi-grid kpi-petit">
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <div class="kpi-valor">{{client.numCompres}}</div>
+          <div class="kpi-label">Compres totals</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <div class="kpi-valor">{{formatPrice client.totalGastat}}</div>
+          <div class="kpi-label">Total gastat</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <div class="kpi-valor">{{formatPrice client.ticketMitja}}</div>
+          <div class="kpi-label">Ticket mitjà</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>🕐 Historial de compres (últimes 10)</h3>
+  <table class="taula">
+    <thead>
+      <tr><th>#</th><th>Data</th><th>Mètode pagament</th><th>Total</th><th>Accions</th></tr>
+    </thead>
+    <tbody>
+      {{#each historial}}
+      <tr>
+        <td>#{{id}}</td>
+        <td>{{formatDate sale_date}}</td>
+        <td>{{payment_method}}</td>
+        <td><strong>{{formatPrice total}}</strong></td>
+        <td><a href="/vendaDetall?id={{id}}" class="btn btn-sm btn-info">👁 Veure</a></td>
+      </tr>
+      {{else}}
+      <tr><td colspan="5" class="buit">Sense compres</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

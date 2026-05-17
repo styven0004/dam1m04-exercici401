@@ -1,0 +1,68 @@
+<div class="page-header">
+  <h1>✏️ Editar producte</h1>
+  <a href="/productes" class="btn btn-sec">← Tornar</a>
+</div>
+
+<div class="card form-card">
+  <form id="form-producte" method="POST" action="/update" novalidate>
+    <input type="hidden" name="taula" value="products">
+    <input type="hidden" name="id" value="{{producte.id}}">
+
+    <div class="form-grup">
+      <label for="name">Nom <span class="obligatori">*</span></label>
+      <input type="text" id="name" name="name" class="form-control" value="{{producte.name}}">
+      <span class="error-msg" id="err-name"></span>
+    </div>
+
+    <div class="form-grup">
+      <label for="category">Categoria <span class="obligatori">*</span></label>
+      <select id="category" name="category" class="form-control">
+        <option value="">-- Selecciona categoria --</option>
+        {{#each (split "Acció,Aventura,RPG,Plataformes,Shooter,Esports,Lluita,Terror,Racing,Estratègia,Ritme,Altre")}}
+          <option value="{{this}}" {{#ifCond this "==" ../producte.category}}selected{{/ifCond}}>{{this}}</option>
+        {{/each}}
+      </select>
+      <span class="error-msg" id="err-category"></span>
+    </div>
+
+    <div class="form-row">
+      <div class="form-grup">
+        <label for="price">Preu (€) <span class="obligatori">*</span></label>
+        <input type="number" id="price" name="price" class="form-control" min="0.01" step="0.01" value="{{producte.price}}">
+        <span class="error-msg" id="err-price"></span>
+      </div>
+      <div class="form-grup">
+        <label for="stock">Stock <span class="obligatori">*</span></label>
+        <input type="number" id="stock" name="stock" class="form-control" min="0" step="1" value="{{producte.stock}}">
+        <span class="error-msg" id="err-stock"></span>
+      </div>
+    </div>
+
+    <div class="form-grup form-grup-check">
+      <label class="check-label">
+        <input type="checkbox" id="active" name="active" value="1" {{#if producte.active}}checked{{/if}}>
+        <span>Producte actiu</span>
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">💾 Desar canvis</button>
+      <a href="/productes" class="btn btn-sec">Cancel·lar</a>
+    </div>
+  </form>
+
+  <hr class="separador">
+
+  <form method="POST" action="/delete" onsubmit="return confirm('Segur que vols esborrar aquest producte?')">
+    <input type="hidden" name="taula" value="products">
+    <input type="hidden" name="id" value="{{producte.id}}">
+    <button type="submit" class="btn btn-danger">🗑️ Esborrar producte</button>
+  </form>
+</div>
+
+<script src="/js/validacio.js"></script>
+<script>
+document.getElementById('form-producte').addEventListener('submit', function(e) {
+  if (!validaProducte()) e.preventDefault();
+});
+</script>

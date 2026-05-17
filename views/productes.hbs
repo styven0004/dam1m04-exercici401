@@ -1,0 +1,59 @@
+<div class="page-header">
+  <h1>📦 Productes</h1>
+  <a href="/producteAfegir" class="btn btn-primary">+ Afegir producte</a>
+</div>
+
+<div class="filtres-bar">
+  <form method="GET" action="/productes" class="cerca-form">
+    <input type="text" name="cerca" value="{{cerca}}" placeholder="Cerca per nom o categoria..." class="input-cerca">
+    <button type="submit" class="btn btn-primary">Cercar</button>
+    {{#if cerca}}<a href="/productes" class="btn btn-sec">✕ Netejar</a>{{/if}}
+  </form>
+  <button class="btn btn-toggle {{#if colorsActius}}actiu{{/if}}" id="btn-colors-prod" onclick="toggleColors(this)">🎨 Colors stock</button>
+</div>
+
+<p class="resum">{{total}} producte(s) trobat(s)</p>
+
+<div class="card">
+  <table class="taula taula-productes">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Nom</th>
+        <th>Categoria</th>
+        <th>Preu</th>
+        <th>Stock</th>
+        <th>Actiu</th>
+        <th>Accions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each productes}}
+      <tr class="fila-stock-{{stockClass stock}}">
+        <td>{{id}}</td>
+        <td><strong>{{name}}</strong></td>
+        <td><span class="badge badge-categoria">{{category}}</span></td>
+        <td>{{formatPrice price}}</td>
+        <td>
+          <span class="stock-num badge badge-{{stockClass stock}}">{{stock}}</span>
+        </td>
+        <td>{{#if active}}✅{{else}}❌{{/if}}</td>
+        <td>
+          <a href="/producteEditar?id={{id}}" class="btn btn-sm btn-sec">✏️ Editar</a>
+        </td>
+      </tr>
+      {{else}}
+      <tr><td colspan="7" class="buit">No s'han trobat productes</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+{{> paginacio}}
+
+<script>
+function toggleColors(btn) {
+  document.body.classList.toggle('colors-stock');
+  btn.classList.toggle('actiu');
+}
+</script>
