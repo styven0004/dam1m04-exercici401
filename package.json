@@ -1,19 +1,24 @@
 {
-  "name": "dam1m04-exercici401",
+  "name": "server",
   "version": "1.0.0",
-  "description": "MiniERP - Botiga de Videojocs",
-  "main": "server/app.js",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "start": "node server/app.js",
-    "dev": "nodemon server/app.js"
+    "dev": "node --watch --watch-path ./server ./server/app.js",
+    "pm2start": "pm2 start ./server/app.js --name app",
+    "pm2stop": "pm2 stop app",
+    "pm2restart": "pm2 restart app",
+    "pm2delete": "pm2 delete app",
+    "pm2list": "pm2 list",
+    "pm2logs": "pm2 logs app"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
-    "express-handlebars": "^7.1.2",
-    "mysql2": "^3.6.5",
-    "body-parser": "^1.20.2"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
+    "express": "^5.2.1",
+    "hbs": "^4.2.0",
+    "mysql2": "^3.16.3",
+    "pm2": "^6.0.14"
   }
 }

@@ -1,62 +1,78 @@
 const express = require('express');
-const { engine } = require('express-handlebars');
-const bodyParser = require('body-parser');
+const fs = require('fs');
 const path = require('path');
-const db = require('./utilsMySQL');
+const hbs = require('hbs');
+const MySQL = require('./utilsMySQL');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 
-// ---- HANDLEBARS ----
-app.engine('hbs', engine({
-  extname: '.hbs',
-  defaultLayout: 'main',
-  layoutsDir: path.join(__dirname, 'views', 'layouts'),
-  partialsDir: path.join(__dirname, 'views', 'partials'),
-  helpers: {
-    // Helper per comparar igualtat
-    ifeq(a, b, options) {
-      return a == b ? options.fn(this) : options.inverse(this);
-    },
-    // Helper per sumar 1 (per mostrar índex 1-based)
-    plusOne(val) {
-      return parseInt(val) + 1;
-    },
-    // Any actual per al footer
-    any() {
-      return new Date().getFullYear();
-    }
-  }
-}));
+// Detectar si estem al Proxmox (si és pm2)
+const isProxmox = !!process.env.PM2_HOME;
 
-app.set('view engine', 'hbs');
+// Iniciar connexió MySQL amb la teva estructura de classes
+const db = new MySQL();
+if (!isProxmox) {
+  db.init({
+    host: 'localhost',
+    port: 3306,
+    user: 'appuser',
+    password: '1234',
+    database: 'gamestore' // Modifica el nom de la base de dades si és necessari
+  });
+} else {
+  db.init({
+    host: '127.0.0.1',
+    port: 3306,
+    user: 'super',
+    password: '1234',
+    database: 'gamestore'
+  });
+}
+
+// Static files - ONLY ONCE
+app.use(express.static('public'));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json()); // Afegit ja que el teu primer script feia servir body-parser.json()
+
+// Disable cache
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  next();
+});
+
+// Handlebars
 app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'hbs');
 
-// ---- MIDDLEWARE ----
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// Registrar "Helpers .hbs" aquí
+hbs.registerHelper('ifeq', (a, b) => a == b);
+hbs.registerHelper('plusOne', (val) => parseInt(val) + 1);
+hbs.registerHelper('any', () => new Date().getFullYear());
 
-// ---- RUTES CRUD (han d'anar abans de les altres) ----
+// Partials de Handlebars
+hbs.registerPartials(path.join(__dirname, 'views', 'partials'));
+
+// ---- RUTES CRUD (Des de fitxers externs de la teva estructura) ----
 const crudRouter = require('./routes/crud');
 app.use('/', crudRouter);
 
-// ---- RUTES PRODUCTES ----
 const productesRouter = require('./routes/productes');
 app.use('/productes', productesRouter);
-app.use('/', productesRouter); // Per /producteAfegir i /producteEditar
+app.use('/', productesRouter);
 
-// ---- RUTES CLIENTS ----
 const clientsRouter = require('./routes/clients');
 app.use('/clients', clientsRouter);
-app.use('/', clientsRouter); // Per /clientAfegir, /clientEditar, /clientFitxa
+app.use('/', clientsRouter);
 
-// ---- RUTES VENDES ----
 const vendesRouter = require('./routes/vendes');
 app.use('/vendes', vendesRouter);
-app.use('/', vendesRouter); // Per /vendaAfegir, /vendaFitxa
+app.use('/', vendesRouter);
 
-// ---- DASHBOARD ----
+// ---- DASHBOARD (Ruta arrel adaptada) ----
 app.get('/', async (req, res) => {
   try {
     const avui = new Date().toISOString().slice(0, 10);
@@ -108,13 +124,24 @@ app.get('/', async (req, res) => {
       topProductes,
       any: new Date().getFullYear()
     });
+
   } catch (err) {
     console.error('Error dashboard:', err);
     res.status(500).send('Error del servidor: ' + err.message);
   }
 });
 
-// ---- INICI ----
-app.listen(PORT, () => {
-  console.log(`🎮 GameStore ERP funcionant a http://localhost:${PORT}`);
+// Start server
+const httpServer = app.listen(port, () => {
+  console.log(`http://localhost:${port}`);
+  console.log(`http://localhost:${port}/productes`);
+  console.log(`http://localhost:${port}/clients`);
+  console.log(`http://localhost:${port}/vendes`);
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  await db.end();
+  httpServer.close();
+  process.exit(0);
 });

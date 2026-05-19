@@ -1,23 +1,119 @@
-const mysql = require('mysql2/promise');
+var mysql = require('mysql2');
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'minierp_videojocs',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+class Obj {
+    // Inicia la connexió amb la base de dades
+    init(parameters) {
+        this.pool = mysql.createPool({
+            connectionLimit: 10,
+            host: parameters.host,
+            port: parameters.port,
+            user: parameters.user,
+            password: parameters.password,
+            database: parameters.database
+        });
+        
+        this.pool.on('connection', (connection) => {
+            connection.query(
+                'SET SESSION group_concat_max_len = 1048576',
+                () => {} // ignore errors
+            );
+        });
 
-async function query(sql, params = []) {
-  const [rows] = await pool.execute(sql, params);
-  return rows;
+        console.log('MySQL connected with destination: ' + parameters.database);
+    }
+
+    // Tanca la connexió amb la base de dades
+    end() {
+        return this.pool.end();
+    }
+
+    // Fer una consulta a la base de dades utilitzant la interfície de callback nativa
+    callbackQuery(queryStr, params, callback) {
+        // Si no es passen paràmetres, reordenem els arguments
+        if (typeof params === 'function') {
+            callback = params;
+            params = [];
+        }
+        this.pool.query(queryStr, params, (err, rst) => callback(err, rst));
+    }
+
+    // Fer una consulta a la base de dades amb 'promises' (Suporta paràmetres opcionalment)
+    query(queryStr, params = []) {
+        return new Promise((resolve, reject) => {
+            return this.callbackQuery(queryStr, params, (err, rst) => { 
+                if (err) { 
+                    return reject(err);
+                } else { 
+                    return resolve(rst);
+                } 
+            });
+        });
+    }
+
+    // Executa una consulta i retorna únicament el primer registre (KPIs, recomptes, objectes únics)
+    async queryOne(queryStr, params = []) {
+        const rows = await this.query(queryStr, params);
+        return rows[0] || null;
+    }
+
+    // Converteix el resultat d'una consulta a un array d'objectes JSON aplicant un esquema de tipus
+    table_to_json(rows, schema = {}) {
+        const cast = (v, forcedType) => {
+            if (v === null || v === undefined) return null;
+
+            if (forcedType === 'string') return String(v);
+
+            if (forcedType === 'number') {
+                if (typeof v === 'number') return v;
+                if (typeof v === 'string' && v.trim() === '') return null; // avoid "" -> 0
+                const n = Number(v);
+                return Number.isFinite(n) ? n : null;
+            }
+
+            if (forcedType === 'boolean') {
+                if (typeof v === 'boolean') return v;
+                if (typeof v === 'number') return v !== 0;
+                const s = String(v).toLowerCase();
+                if (s === 'true') return true;
+                if (s === 'false') return false;
+                const n = Number(s);
+                return Number.isNaN(n) ? Boolean(v) : n !== 0;
+            }
+
+            if (forcedType === 'date') {
+                if (v instanceof Date) return v.toISOString().slice(0, 10);
+                return String(v);
+            }
+
+            if (forcedType === 'datetime') {
+                if (v instanceof Date) return v.toISOString();
+                return String(v);
+            }
+
+            if (forcedType === 'base64') {
+                if (Buffer.isBuffer(v)) return v.toString('base64');
+                return String(v);
+            }
+
+            if (Buffer.isBuffer(v)) return v.toString('base64');
+            if (v instanceof Date) return v.toISOString();
+
+            if (typeof v === 'bigint') {
+                const n = Number(v);
+                return Number.isSafeInteger(n) ? n : v.toString();
+            }
+
+            if (typeof v === 'number' || typeof v === 'boolean') return v;
+
+            return v; // keep strings as strings by default
+        };
+
+        return rows.map((row) => {
+            const obj = {};
+            for (const [col, val] of Object.entries(row)) obj[col] = cast(val, schema[col]);
+            return obj;
+        });
+    }
 }
 
-async function queryOne(sql, params = []) {
-  const rows = await query(sql, params);
-  return rows[0] || null;
-}
-
-module.exports = { query, queryOne, pool };
+module.exports = Obj;
