@@ -1,119 +1,97 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../utilsMySQL');
+const MySQL = require('../utilsMySQL'); // Carrega el mòdul des de l'arrel
 
-// ---- CREATE ----
-router.post('/create', async (req, res) => {
-  const { taula, ...data } = req.body;
+const db = new MySQL();
+
+// Detectar entorn Proxmox / Local
+const isProxmox = !!process.env.PM2_HOME;
+if (!isProxmox) {
+  db.init({
+    host: 'localhost',
+    port: 3306,
+    user: 'appuser',
+    password: '1234',
+    database: 'minierp_videojocs'
+  });
+} else {
+  db.init({
+    host: '127.0.0.1',
+    port: 3306,
+    user: 'super',
+    password: '1234',
+    database: 'minierp_videojocs'
+  });
+}
+
+// Mapes auxiliars per fer coincidir els paràmetres de la URL amb les taules reals i vistes
+const taulaMapping = {
+  'productes': { tabla: 'products', vistaForm: 'producteForm', redirect: '/productes' },
+  'clients': { tabla: 'customers', vistaForm: 'clientForm', redirect: '/clients' },
+  'vendes': { tabla: 'sales', vistaForm: 'vendaAfegir', redirect: '/vendes' }
+};
+
+// 1. RUTA PER MOSTRAR FORMULARIS D'AFEGIR (Rutes dinàmiques compatibles amb el menú)
+router.get('/:seccio/afegir', (req, res, next) => {
+  const seccio = req.params.seccio;
+  const mapa = taulaMapping[seccio];
+  
+  if (!mapa) return next(); // Si no és una secció vàlida, passa a la següent ruta
+
+  res.render(mapa.vistaForm, {
+    titol: `Afegir Nou a ${seccio}`,
+    isNew: true
+  });
+});
+
+// 2. RUTA PER REBRE LES DADES I RECORRER EL POST D'INSERCIÓ
+router.post('/:seccio/afegir', async (req, res, next) => {
+  const seccio = req.params.seccio;
+  const mapa = taulaMapping[seccio];
+  
+  if (!mapa) return next();
 
   try {
-    if (taula === 'productes') {
-      const { name, category, price, stock, active } = data;
+    if (mapa.tabla === 'products') {
+      const { name, category, price, stock, active } = req.body;
       await db.query(
         'INSERT INTO products (name, category, price, stock, active) VALUES (?, ?, ?, ?, ?)',
-        [name, category, parseFloat(price), parseInt(stock), active === '1' ? 1 : 0]
+        [name, category, parseFloat(price) || 0, parseInt(stock) || 0, active ? 1 : 0]
       );
-      return res.redirect('/productes');
-    }
-
-    if (taula === 'clients') {
-      const { name, email, phone } = data;
+    } else if (mapa.tabla === 'customers') {
+      const { name, email, phone } = req.body;
       await db.query(
         'INSERT INTO customers (name, email, phone) VALUES (?, ?, ?)',
-        [name, email, phone]
+        [name, email, phone || null]
       );
-      return res.redirect('/clients');
     }
-
-    if (taula === 'vendes') {
-      const { customer_id, payment_method, sale_date, total, linies } = data;
-
-      // Crear venda
-      const result = await db.query(
-        'INSERT INTO sales (customer_id, payment_method, sale_date, total) VALUES (?, ?, ?, ?)',
-        [parseInt(customer_id), payment_method, sale_date || new Date(), parseFloat(total)]
-      );
-      const saleId = result.insertId;
-
-      // Insertar línies i actualitzar stock
-      if (linies) {
-        const liniesArray = Object.values(linies);
-        for (const linia of liniesArray) {
-          const { product_id, unit_price, qty, line_total } = linia;
-          if (!product_id) continue;
-
-          await db.query(
-            'INSERT INTO sale_items (sale_id, product_id, qty, unit_price, line_total) VALUES (?, ?, ?, ?, ?)',
-            [saleId, parseInt(product_id), parseInt(qty), parseFloat(unit_price), parseFloat(line_total)]
-          );
-
-          // Reduir stock
-          await db.query(
-            'UPDATE products SET stock = GREATEST(0, stock - ?) WHERE id = ?',
-            [parseInt(qty), parseInt(product_id)]
-          );
-        }
-      }
-
-      return res.redirect('/vendes');
-    }
-
-    res.redirect('/');
+    
+    res.redirect(mapa.redirect);
   } catch (err) {
-    console.error('Error create:', err);
-    res.status(500).send('Error al crear: ' + err.message);
+    console.error(`Error al desar a ${mapa.tabla}:`, err);
+    res.status(500).send('Error del servidor al desar les dades: ' + err.message);
   }
 });
 
-// ---- UPDATE ----
-router.post('/Update', async (req, res) => {
-  const { taula, id, ...data } = req.body;
+// 3. RUTA GENERAL PER ELIMINAR REGISTRES
+router.get('/:seccio/eliminar/:id', async (req, res, next) => {
+  const { seccio, id } = req.params;
+  const mapa = taulaMapping[seccio];
+
+  if (!mapa) return next();
 
   try {
-    if (taula === 'productes') {
-      const { name, category, price, stock, active } = data;
-      await db.query(
-        'UPDATE products SET name=?, category=?, price=?, stock=?, active=? WHERE id=?',
-        [name, category, parseFloat(price), parseInt(stock), active === '1' ? 1 : 0, parseInt(id)]
-      );
-      return res.redirect('/productes');
+    if (mapa.tabla === 'products') {
+      // Soft delete per no trencar l'historial de vendes (recomanat)
+      await db.query('UPDATE products SET active = 0 WHERE id = ?', [id]);
+    } else {
+      // Hard delete directe per a clients si no tenen vincles restrictius
+      await db.query(`DELETE FROM ${mapa.tabla} WHERE id = ?`, [id]);
     }
-
-    if (taula === 'clients') {
-      const { name, email, phone } = data;
-      await db.query(
-        'UPDATE customers SET name=?, email=?, phone=? WHERE id=?',
-        [name, email, phone, parseInt(id)]
-      );
-      return res.redirect('/clients');
-    }
-
-    res.redirect('/');
+    res.redirect(mapa.redirect);
   } catch (err) {
-    console.error('Error update:', err);
-    res.status(500).send('Error al actualitzar: ' + err.message);
-  }
-});
-
-// ---- DELETE ----
-router.post('/Delete', async (req, res) => {
-  const { taula, id } = req.body;
-
-  try {
-    if (taula === 'productes') {
-      await db.query('DELETE FROM products WHERE id=?', [parseInt(id)]);
-      return res.redirect('/productes');
-    }
-
-    if (taula === 'clients') {
-      await db.query('DELETE FROM customers WHERE id=?', [parseInt(id)]);
-      return res.redirect('/clients');
-    }
-
-    res.redirect('/');
-  } catch (err) {
-    console.error('Error delete:', err);
-    res.status(500).send('Error al eliminar: ' + err.message);
+    console.error(`Error en eliminar de ${mapa.tabla}:`, err);
+    res.status(500).send('No es pot eliminar el registre perquè té elements dependents en l\'historial.');
   }
 });
 

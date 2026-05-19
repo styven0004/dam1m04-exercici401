@@ -1,135 +1,127 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../utilsMySQL');
+const MySQL = require('../utilsMySQL'); // Pujem un nivell de carpeta
 
-const PER_PAGINA = 10;
-const VIP_THRESHOLD = 3; // >=3 compres = VIP
+const db = new MySQL();
 
-// Llistat clients
+// Detectar si estem al Proxmox
+const isProxmox = !!process.env.PM2_HOME;
+if (!isProxmox) {
+  db.init({
+    host: 'localhost',
+    port: 3306,
+    user: 'appuser',
+    password: '1234',
+    database: 'minierp_videojocs'
+  });
+} else {
+  db.init({
+    host: '127.0.0.1',
+    port: 3306,
+    user: 'super',
+    password: '1234',
+    database: 'minierp_videojocs'
+  });
+}
+
+// 1. LLISTAT DE CLIENTS
 router.get('/', async (req, res) => {
   try {
-    const pagina = parseInt(req.query.pagina) || 0;
-    const cerca = req.query.cerca || '';
-    const vip = req.query.vip === '1';
-    const offset = pagina * PER_PAGINA;
-
-    let conditions = [];
-    let params = [];
-
-    if (cerca) {
-      conditions.push('(c.name LIKE ? OR c.email LIKE ?)');
-      params.push(`%${cerca}%`, `%${cerca}%`);
-    }
-
-    const havingClause = vip ? `HAVING num_compres >= ${VIP_THRESHOLD}` : '';
-    const whereClause = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
-
-    const baseQuery = `
-      SELECT c.*,
-        COUNT(s.id) AS num_compres,
-        COALESCE(SUM(s.total), 0) AS total_gastat
-      FROM customers c
-      LEFT JOIN sales s ON s.customer_id = c.id
-      ${whereClause}
-      GROUP BY c.id
-      ${havingClause}
-    `;
-
-    const countRow = await db.queryOne(`SELECT COUNT(*) as total FROM (${baseQuery}) sub`, params);
-    const total = countRow.total;
-    const totalPagines = Math.ceil(total / PER_PAGINA);
-
-    const clients = await db.query(`${baseQuery} ORDER BY c.id DESC LIMIT ? OFFSET ?`, [...params, PER_PAGINA, offset]);
-
-    const clientsFormatats = clients.map(c => ({
-      ...c,
-      total_gastat: parseFloat(c.total_gastat || 0).toFixed(2),
-      esVip: c.num_compres >= VIP_THRESHOLD
-    }));
-
-    const pagines = Array.from({ length: totalPagines }, (_, i) => ({ num: i, actual: i === pagina }));
+    const rows = await db.query('SELECT * FROM customers ORDER BY id DESC');
+    const records = db.table_to_json(rows, {
+      name: 'string',
+      email: 'string',
+      phone: 'string'
+    });
 
     res.render('clients', {
-      titol: 'Clients',
-      clients: clientsFormatats,
-      total,
-      cerca,
-      vip,
-      pagina,
-      totalPagines: totalPagines > 1 ? totalPagines : null,
-      pagines,
-      paginaAnterior: pagina > 0 ? pagina - 1 : null,
-      paginaSeguent: pagina < totalPagines - 1 ? pagina + 1 : null
+      titol: 'Gestió de Clients',
+      clients: records
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Error del servidor');
+    console.error('Error a llistat de clients:', err);
+    res.status(500).send('Error del servidor: ' + err.message);
   }
 });
 
-// Fitxa client
-router.get('/clientFitxa', async (req, res) => {
+// 2. FORMULARI D'AFEGIR CLIENT
+router.get('/afegir', (req, res) => {
+  res.render('clientForm', {
+    titol: 'Afegir Nou Client',
+    isNew: true
+  });
+});
+
+// 3. ACCIÓ D'INSERIR CLIENT
+router.post('/afegir', async (req, res) => {
   try {
-    const id = req.query.id;
-    if (!id) return res.redirect('/clients');
+    const { name, email, phone } = req.body;
 
-    const client = await db.queryOne(`
-      SELECT c.*,
-        COUNT(s.id) AS num_compres,
-        COALESCE(SUM(s.total), 0) AS total_gastat
-      FROM customers c
-      LEFT JOIN sales s ON s.customer_id = c.id
-      WHERE c.id = ?
-      GROUP BY c.id
-    `, [id]);
+    await db.query(
+      'INSERT INTO customers (name, email, phone) VALUES (?, ?, ?)',
+      [name, email, phone || null]
+    );
 
-    if (!client) return res.redirect('/clients');
-
-    const historial = await db.query(`
-      SELECT * FROM sales WHERE customer_id = ? ORDER BY sale_date DESC LIMIT 10
-    `, [id]);
-
-    const historialFormatat = historial.map(s => ({
-      ...s,
-      sale_date: new Date(s.sale_date).toLocaleDateString('ca-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    }));
-
-    const totalGastat = parseFloat(client.total_gastat || 0);
-    const ticketMig = client.num_compres > 0 ? (totalGastat / client.num_compres).toFixed(2) : '0.00';
-
-    res.render('clientFitxa', {
-      titol: client.name,
-      client: {
-        ...client,
-        total_gastat: totalGastat.toFixed(2),
-        ticket_mig: ticketMig,
-        esVip: client.num_compres >= VIP_THRESHOLD,
-        created_at: new Date(client.created_at).toLocaleDateString('ca-ES')
-      },
-      historial: historialFormatat
-    });
-  } catch (err) {
-    console.error(err);
     res.redirect('/clients');
+  } catch (err) {
+    console.error('Error en afegir client:', err);
+    res.status(500).send('Error del servidor: ' + err.message);
   }
 });
 
-// Formulari afegir
-router.get('/clientAfegir', (req, res) => {
-  res.render('clientForm', { titol: 'Nou Client' });
-});
-
-// Formulari editar
-router.get('/clientEditar', async (req, res) => {
+// 4. FORMULARI D'EDITAR CLIENT (QueryOne corregit!)
+router.get('/editar/:id', async (req, res) => {
   try {
-    const id = req.query.id;
-    if (!id) return res.redirect('/clients');
+    const id = req.params.id;
     const client = await db.queryOne('SELECT * FROM customers WHERE id = ?', [id]);
-    if (!client) return res.redirect('/clients');
-    res.render('clientForm', { titol: `Editar: ${client.name}`, client });
+
+    if (!client) {
+      return res.status(404).send('Client no trobat');
+    }
+
+    res.render('clientForm', {
+      titol: 'Editar Client',
+      isNew: false,
+      client: {
+        id: client.id,
+        name: client.name,
+        email: client.email,
+        phone: client.phone
+      }
+    });
   } catch (err) {
-    console.error(err);
+    console.error('Error en obrir formulari d\'editar client:', err);
+    res.status(500).send('Error del servidor: ' + err.message);
+  }
+});
+
+// 5. ACCIÓ D'ACTUALITZAR CLIENT
+router.post('/editar/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { name, email, phone } = req.body;
+
+    await db.query(
+      'UPDATE customers SET name = ?, email = ?, phone = ? WHERE id = ?',
+      [name, email, phone || null, id]
+    );
+
     res.redirect('/clients');
+  } catch (err) {
+    console.error('Error en actualitzar client:', err);
+    res.status(500).send('Error del servidor: ' + err.message);
+  }
+});
+
+// 6. ACCIÓ D'ELIMINAR CLIENT
+router.get('/eliminar/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    await db.query('DELETE FROM customers WHERE id = ?', [id]);
+    res.redirect('/clients');
+  } catch (err) {
+    console.error('Error en eliminar client:', err);
+    res.status(500).send('Error de restricció: No es pot eliminar un client amb vendes associades.');
   }
 });
 
