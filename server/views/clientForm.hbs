@@ -1,0 +1,112 @@
+<!-- FORMULARI CLIENT -->
+<div class="flex-between mb-24">
+  <div>
+    <h2 style="font-family: 'Rajdhani', sans-serif; font-size: 22px; margin-bottom: 4px;">
+      {{#if client}}✏️ Editar Client{{else}}👤 Nou Client{{/if}}
+    </h2>
+    <p class="text-muted" style="font-size: 14px;">
+      {{#if client}}Modifica les dades del client #{{client.id}}{{else}}Registra un nou client{{/if}}
+    </p>
+  </div>
+  <a href="/clients" class="btn btn-ghost">← Tornar</a>
+</div>
+
+<div class="card" style="max-width: 580px;">
+  <div class="card-body">
+    <form id="formClient" method="POST" action="{{#if client}}/Update{{else}}/create{{/if}}" novalidate>
+      <input type="hidden" name="taula" value="clients">
+      {{#if client}}
+        <input type="hidden" name="id" value="{{client.id}}">
+      {{/if}}
+
+      <div class="form-group">
+        <label class="form-label" for="name">Nom complet *</label>
+        <input type="text" id="name" name="name" class="form-control" value="{{client.name}}" placeholder="Ex: Joan Garcia" required>
+        <div class="error-msg" id="err-name">El nom és obligatori.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email *</label>
+        <input type="email" id="email" name="email" class="form-control" value="{{client.email}}" placeholder="exemple@email.com" required>
+        <div class="error-msg" id="err-email">Introdueix un email vàlid.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="phone">Telèfon *</label>
+        <input type="text" id="phone" name="phone" class="form-control" value="{{client.phone}}" placeholder="6XXXXXXXX" required>
+        <div class="error-msg" id="err-phone">El telèfon ha de tenir almenys 9 dígits.</div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          {{#if client}}💾 Desar canvis{{else}}👤 Crear client{{/if}}
+        </button>
+        <a href="/clients" class="btn btn-ghost">Cancel·lar</a>
+        {{#if client}}
+          <button type="button" class="btn btn-danger" style="margin-left: auto;" onclick="confirmarEsborrar()">🗑 Eliminar</button>
+        {{/if}}
+      </div>
+    </form>
+
+    {{#if client}}
+    <form id="formEsborrar" method="POST" action="/Delete" style="display:none;">
+      <input type="hidden" name="taula" value="clients">
+      <input type="hidden" name="id" value="{{client.id}}">
+    </form>
+    {{/if}}
+  </div>
+</div>
+
+<script>
+  document.getElementById('formClient').addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (validarFormulari()) this.submit();
+  });
+
+  function validarFormulari() {
+    let valid = true;
+    clearErrors();
+
+    const name = document.getElementById('name').value.trim();
+    if (!name) {
+      mostrarError('name'); valid = false;
+    }
+
+    const email = document.getElementById('email').value.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      mostrarError('email'); valid = false;
+    }
+
+    const phone = document.getElementById('phone').value.trim().replace(/\s/g, '');
+    if (!phone || phone.length < 9) {
+      mostrarError('phone'); valid = false;
+    }
+
+    return valid;
+  }
+
+  function mostrarError(fieldId) {
+    document.getElementById(fieldId).classList.add('error');
+    document.getElementById('err-' + fieldId).classList.add('visible');
+  }
+
+  function clearErrors() {
+    document.querySelectorAll('.form-control').forEach(f => f.classList.remove('error'));
+    document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('visible'));
+  }
+
+  document.querySelectorAll('.form-control').forEach(f => {
+    f.addEventListener('input', function() {
+      this.classList.remove('error');
+      const err = document.getElementById('err-' + this.id);
+      if (err) err.classList.remove('visible');
+    });
+  });
+
+  function confirmarEsborrar() {
+    if (confirm('Segur que vols eliminar aquest client? Aquesta acció no es pot desfer.')) {
+      document.getElementById('formEsborrar').submit();
+    }
+  }
+</script>

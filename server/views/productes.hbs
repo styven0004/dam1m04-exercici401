@@ -1,0 +1,119 @@
+<!-- LLISTAT PRODUCTES -->
+<div class="flex-between mb-24">
+  <div>
+    <h2 style="font-family: 'Rajdhani', sans-serif; font-size: 22px; margin-bottom: 4px;">Catàleg de Productes</h2>
+    <p class="text-muted" style="font-size: 14px;">{{total}} productes registrats</p>
+  </div>
+  <a href="/producteAfegir" class="btn btn-primary">➕ Afegir producte</a>
+</div>
+
+<!-- Cerca i filtres -->
+<div class="card mb-24">
+  <div class="card-body" style="padding: 16px 22px;">
+    <form method="GET" action="/productes" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <input
+        type="text"
+        name="cerca"
+        class="form-control"
+        placeholder="🔍 Cerca per nom o categoria..."
+        value="{{cerca}}"
+        style="max-width: 300px;"
+      >
+      <button type="submit" class="btn btn-secondary">Cercar</button>
+      {{#if cerca}}
+        <a href="/productes" class="btn btn-ghost">✕ Netejar</a>
+      {{/if}}
+      <div style="margin-left: auto;">
+        <button type="button" class="btn btn-toggle" id="btnColors" onclick="toggleColors()">🎨 Codi de colors</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Taula -->
+<div class="card">
+  <div class="table-wrapper">
+    <table id="taulaProductes">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nom</th>
+          <th>Categoria</th>
+          <th>Preu</th>
+          <th>Stock</th>
+          <th>Actiu</th>
+          <th>Accions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each productes}}
+        <tr data-stock="{{this.stock}}">
+          <td class="text-muted">#{{this.id}}</td>
+          <td class="fw-bold">{{this.name}}</td>
+          <td><span class="badge badge-info">{{this.category}}</span></td>
+          <td class="fw-bold">{{this.price}}€</td>
+          <td>{{this.stock}}</td>
+          <td>
+            {{#if this.active}}
+              <span class="badge badge-success">✓ Sí</span>
+            {{else}}
+              <span class="badge badge-secondary">✗ No</span>
+            {{/if}}
+          </td>
+          <td>
+            <a href="/producteEditar?id={{this.id}}" class="btn btn-ghost btn-sm">✏️ Editar</a>
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <div class="empty-icon">🎮</div>
+              <p>No s'han trobat productes{{#if cerca}} per "{{cerca}}"{{/if}}</p>
+            </div>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Paginació -->
+{{#if totalPagines}}
+<div class="paginacio">
+  {{#if paginaAnterior}}
+    <a href="/productes?pagina={{paginaAnterior}}{{#if cerca}}&cerca={{cerca}}{{/if}}">‹</a>
+  {{/if}}
+  {{#each pagines}}
+    {{#if this.actual}}
+      <span class="actual">{{this.num}}</span>
+    {{else}}
+      <a href="/productes?pagina={{this.num}}{{#if ../cerca}}&cerca={{../cerca}}{{/if}}">{{this.num}}</a>
+    {{/if}}
+  {{/each}}
+  {{#if paginaSeguent}}
+    <a href="/productes?pagina={{paginaSeguent}}{{#if cerca}}&cerca={{cerca}}{{/if}}">›</a>
+  {{/if}}
+</div>
+{{/if}}
+
+<script>
+  let colorsActiu = false;
+  function toggleColors() {
+    colorsActiu = !colorsActiu;
+    const btn = document.getElementById('btnColors');
+    btn.classList.toggle('actiu', colorsActiu);
+    btn.textContent = colorsActiu ? '🎨 Colors actius' : '🎨 Codi de colors';
+
+    document.querySelectorAll('#taulaProductes tbody tr').forEach(row => {
+      row.classList.remove('stock-ok', 'stock-baix', 'stock-critic');
+      if (colorsActiu) {
+        const stock = parseInt(row.dataset.stock) || 0;
+        if (stock <= 5) row.classList.add('stock-critic');
+        else if (stock <= 15) row.classList.add('stock-baix');
+        else row.classList.add('stock-ok');
+      }
+    });
+  }
+</script>

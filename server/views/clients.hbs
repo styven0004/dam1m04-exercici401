@@ -1,0 +1,103 @@
+<!-- LLISTAT CLIENTS -->
+<div class="flex-between mb-24">
+  <div>
+    <h2 style="font-family: 'Rajdhani', sans-serif; font-size: 22px; margin-bottom: 4px;">Clients</h2>
+    <p class="text-muted" style="font-size: 14px;">{{total}} clients registrats</p>
+  </div>
+  <a href="/clientAfegir" class="btn btn-primary">👤 Afegir client</a>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-24">
+  <div class="card-body" style="padding: 16px 22px;">
+    <form method="GET" action="/clients" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <input
+        type="text"
+        name="cerca"
+        class="form-control"
+        placeholder="🔍 Cerca per nom o email..."
+        value="{{cerca}}"
+        style="max-width: 280px;"
+      >
+      <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer;">
+        <input type="checkbox" name="vip" value="1" {{#if vip}}checked{{/if}} style="width: 16px; height: 16px; accent-color: var(--accent);">
+        ⭐ Clients VIP
+      </label>
+      <button type="submit" class="btn btn-secondary">Cercar</button>
+      {{#if cerca}}
+        <a href="/clients" class="btn btn-ghost">✕ Netejar</a>
+      {{/if}}
+    </form>
+  </div>
+</div>
+
+<!-- Taula -->
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nom</th>
+          <th>Email</th>
+          <th>Telèfon</th>
+          <th># Compres</th>
+          <th>Total gastat</th>
+          <th>VIP</th>
+          <th>Accions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each clients}}
+        <tr>
+          <td class="text-muted">#{{this.id}}</td>
+          <td class="fw-bold">{{this.name}}</td>
+          <td class="text-muted">{{this.email}}</td>
+          <td class="text-muted">{{this.phone}}</td>
+          <td>{{this.num_compres}}</td>
+          <td class="fw-bold">{{this.total_gastat}}€</td>
+          <td>
+            {{#if this.esVip}}
+              <span class="badge badge-warning">⭐ VIP</span>
+            {{else}}
+              <span class="badge badge-secondary">Estàndard</span>
+            {{/if}}
+          </td>
+          <td style="display: flex; gap: 6px;">
+            <a href="/clientFitxa?id={{this.id}}" class="btn btn-ghost btn-sm">👁 Veure</a>
+            <a href="/clientEditar?id={{this.id}}" class="btn btn-ghost btn-sm">✏️ Editar</a>
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">
+              <div class="empty-icon">👥</div>
+              <p>No s'han trobat clients{{#if cerca}} per "{{cerca}}"{{/if}}</p>
+            </div>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Paginació -->
+{{#if totalPagines}}
+<div class="paginacio">
+  {{#if paginaAnterior}}
+    <a href="/clients?pagina={{paginaAnterior}}{{#if cerca}}&cerca={{cerca}}{{/if}}{{#if vip}}&vip=1{{/if}}">‹</a>
+  {{/if}}
+  {{#each pagines}}
+    {{#if this.actual}}
+      <span class="actual">{{this.num}}</span>
+    {{else}}
+      <a href="/clients?pagina={{this.num}}{{#if ../cerca}}&cerca={{../cerca}}{{/if}}{{#if ../vip}}&vip=1{{/if}}">{{this.num}}</a>
+    {{/if}}
+  {{/each}}
+  {{#if paginaSeguent}}
+    <a href="/clients?pagina={{paginaSeguent}}{{#if cerca}}&cerca={{cerca}}{{/if}}{{#if vip}}&vip=1{{/if}}">›</a>
+  {{/if}}
+</div>
+{{/if}}

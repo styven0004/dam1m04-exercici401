@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{titol}} — GameStore ERP</title>
+  <link rel="stylesheet" href="/estils.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+</head>
+<body class="tema-clar">
+  <div class="wrapper">
+    {{> menu}}
+    <div class="main-content">
+      {{> header}}
+      <main class="page-content">
+        {{{body}}}
+      </main>
+    </div>
+  </div>
+  {{> footer}}
+
+  <script>
+    // Aplicar tema desat
+    (function() {
+      const tema = localStorage.getItem('tema') || 'tema-clar';
+      document.body.className = tema;
+    })();
+  </script>
+
+  <script>
+    // Sistema de temes
+    function canviarTema(tema) {
+      document.body.className = tema;
+      localStorage.setItem('tema', tema);
+      document.querySelectorAll('.tema-btn').forEach(btn => {
+        btn.classList.toggle('actiu', btn.dataset.tema === tema);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const temaActual = localStorage.getItem('tema') || 'tema-clar';
+      document.body.className = temaActual;
+      document.querySelectorAll('.tema-btn').forEach(btn => {
+        btn.classList.toggle('actiu', btn.dataset.tema === temaActual);
+      });
+
+      // Marcar nav link actiu
+      const path = window.location.pathname;
+      document.querySelectorAll('.nav-link').forEach(link => {
+        const href = link.getAttribute('href');
+        if (href === '/' && path === '/') {
+          link.classList.add('actiu');
+        } else if (href !== '/' && path.startsWith(href)) {
+          link.classList.add('actiu');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

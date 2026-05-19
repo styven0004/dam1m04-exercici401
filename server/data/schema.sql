@@ -1,0 +1,47 @@
+-- MiniERP Botiga de Videojocs - Schema MySQL
+-- DAM1M04-Exercici401
+
+CREATE DATABASE IF NOT EXISTS minierp_videojocs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE minierp_videojocs;
+
+-- Taula productes
+CREATE TABLE IF NOT EXISTS products (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  category VARCHAR(100) NOT NULL,
+  price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  stock INT NOT NULL DEFAULT 0,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Taula clients
+CREATE TABLE IF NOT EXISTS customers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  phone VARCHAR(20),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Taula vendes
+CREATE TABLE IF NOT EXISTS sales (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  customer_id INT NOT NULL,
+  sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  payment_method VARCHAR(50) DEFAULT 'Targeta',
+  total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
+);
+
+-- Taula línies de venda
+CREATE TABLE IF NOT EXISTS sale_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  sale_id INT NOT NULL,
+  product_id INT NOT NULL,
+  qty INT NOT NULL DEFAULT 1,
+  unit_price DECIMAL(10,2) NOT NULL,
+  line_total DECIMAL(10,2) NOT NULL,
+  FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
+);

@@ -1,0 +1,145 @@
+<!-- FORMULARI PRODUCTE (Afegir / Editar) -->
+<div class="flex-between mb-24">
+  <div>
+    <h2 style="font-family: 'Rajdhani', sans-serif; font-size: 22px; margin-bottom: 4px;">
+      {{#if producte}}✏️ Editar Producte{{else}}➕ Nou Producte{{/if}}
+    </h2>
+    <p class="text-muted" style="font-size: 14px;">
+      {{#if producte}}Modifica les dades del producte #{{producte.id}}{{else}}Afegeix un nou producte al catàleg{{/if}}
+    </p>
+  </div>
+  <a href="/productes" class="btn btn-ghost">← Tornar</a>
+</div>
+
+<div class="card" style="max-width: 640px;">
+  <div class="card-body">
+    <form id="formProducte" method="POST" action="{{#if producte}}/Update{{else}}/create{{/if}}" novalidate>
+      <input type="hidden" name="taula" value="productes">
+      {{#if producte}}
+        <input type="hidden" name="id" value="{{producte.id}}">
+      {{/if}}
+
+      <div class="form-group">
+        <label class="form-label" for="name">Nom del producte *</label>
+        <input type="text" id="name" name="name" class="form-control" value="{{producte.name}}" placeholder="Ex: The Legend of Zelda..." required>
+        <div class="error-msg" id="err-name">El nom és obligatori i ha de tenir almenys 3 caràcters.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="category">Categoria *</label>
+        <select id="category" name="category" class="form-control" required>
+          <option value="">— Selecciona categoria —</option>
+          {{#each categories}}
+            <option value="{{this}}" {{#ifeq this ../producte.category}}selected{{/ifeq}}>{{this}}</option>
+          {{/each}}
+        </select>
+        <div class="error-msg" id="err-category">Has de seleccionar una categoria.</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="price">Preu (€) *</label>
+          <input type="number" id="price" name="price" class="form-control" value="{{producte.price}}" placeholder="0.00" step="0.01" min="0.01" required>
+          <div class="error-msg" id="err-price">El preu ha de ser un decimal major a 0.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="stock">Stock *</label>
+          <input type="number" id="stock" name="stock" class="form-control" value="{{producte.stock}}" placeholder="0" step="1" min="0" required>
+          <div class="error-msg" id="err-stock">El stock ha de ser un enter igual o major a 0.</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="active">Actiu</label>
+        <select id="active" name="active" class="form-control">
+          <option value="1" {{#if producte.active}}selected{{/if}}>Sí</option>
+          <option value="0" {{#unless producte.active}}selected{{/unless}}>No</option>
+        </select>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          {{#if producte}}💾 Desar canvis{{else}}➕ Crear producte{{/if}}
+        </button>
+        <a href="/productes" class="btn btn-ghost">Cancel·lar</a>
+        {{#if producte}}
+          <button type="button" class="btn btn-danger" style="margin-left: auto;" onclick="confirmarEsborrar()">🗑 Eliminar</button>
+        {{/if}}
+      </div>
+    </form>
+
+    {{#if producte}}
+    <form id="formEsborrar" method="POST" action="/Delete" style="display:none;">
+      <input type="hidden" name="taula" value="productes">
+      <input type="hidden" name="id" value="{{producte.id}}">
+    </form>
+    {{/if}}
+  </div>
+</div>
+
+<script>
+  // Validació formulari
+  document.getElementById('formProducte').addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (validarFormulari()) this.submit();
+  });
+
+  function validarFormulari() {
+    let valid = true;
+    clearErrors();
+
+    const name = document.getElementById('name').value.trim();
+    if (!name || name.length < 3) {
+      mostrarError('name', 'err-name');
+      valid = false;
+    }
+
+    const category = document.getElementById('category').value;
+    if (!category) {
+      mostrarError('category', 'err-category');
+      valid = false;
+    }
+
+    const price = parseFloat(document.getElementById('price').value);
+    if (isNaN(price) || price <= 0) {
+      mostrarError('price', 'err-price');
+      valid = false;
+    }
+
+    const stock = document.getElementById('stock').value;
+    if (stock === '' || !Number.isInteger(Number(stock)) || Number(stock) < 0) {
+      mostrarError('stock', 'err-stock');
+      valid = false;
+    }
+
+    return valid;
+  }
+
+  function mostrarError(fieldId, errId) {
+    const field = document.getElementById(fieldId);
+    const err = document.getElementById('err-' + fieldId);
+    if (field) field.classList.add('error');
+    if (err) err.classList.add('visible');
+  }
+
+  function clearErrors() {
+    document.querySelectorAll('.form-control').forEach(f => f.classList.remove('error'));
+    document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('visible'));
+  }
+
+  // Netejar error en focus
+  document.querySelectorAll('.form-control').forEach(f => {
+    f.addEventListener('input', function() {
+      this.classList.remove('error');
+      const err = document.getElementById('err-' + this.id);
+      if (err) err.classList.remove('visible');
+    });
+  });
+
+  function confirmarEsborrar() {
+    if (confirm('Segur que vols eliminar aquest producte? Aquesta acció no es pot desfer.')) {
+      document.getElementById('formEsborrar').submit();
+    }
+  }
+</script>
