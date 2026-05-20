@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const MySQL = require('../utilsMySQL'); // Pujem un nivell de carpeta
+const MySQL = require('../utilsMySQL');
 
 const db = new MySQL();
 
-// Detectar si estem al Proxmox
 const isProxmox = !!process.env.PM2_HOME;
 if (!isProxmox) {
   db.init({
@@ -24,33 +23,36 @@ if (!isProxmox) {
   });
 }
 
-// 1. LLISTAT DE VENDES GENERAL
+// 1. HISTORIAL DE VENDES (GET /vendes)
 router.get('/', async (req, res) => {
   try {
-    const rows = await db.query(`
-      SELECT s.id, s.sale_date, s.payment_method, s.total, c.name AS client_name 
-      FROM sales s 
-      LEFT JOIN customers c ON s.customer_id = c.id 
-      ORDER BY s.id DESC
-    `);
+    const textCercat = req.query.cerca;
+    let rows;
 
-    const records = db.table_to_json(rows, {
-      id: 'number',
-      total: 'number',
-      client_name: 'string',
-      payment_method: 'string'
-    });
+    let sql = `
+      SELECT s.id, s.sale_date, s.payment_method, s.total, c.name AS client_name
+      FROM sales s
+      LEFT JOIN customers c ON c.id = s.customer_id
+    `;
 
-    // Formategem les dates de cara a la vista
-    const vendesFormatades = records.map(v => ({
-      ...v,
-      sale_date: v.sale_date ? new Date(v.sale_date).toLocaleDateString('ca-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '',
-      total: parseFloat(v.total).toFixed(2)
-    }));
+    if (textCercat) {
+      sql += ` WHERE c.name LIKE ? ORDER BY s.id DESC`;
+      rows = await db.query(sql, [`%${textCercat}%`]);
+    } else {
+      sql += ` ORDER BY s.id DESC`;
+      rows = await db.query(sql);
+    }
+
+    const records = db.table_to_json(rows, { total: 'number' });
 
     res.render('vendes', {
       titol: 'Historial de Vendes',
-      vendes: vendesFormatades
+      vendes: records.map(v => ({
+        ...v,
+        sale_date: v.sale_date ? new Date(v.sale_date).toLocaleString('ca-ES') : ''
+      })),
+      cerca: textCercat,
+      total: records.length
     });
   } catch (err) {
     console.error('Error a llistat de vendes:', err);
@@ -58,55 +60,39 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 2. DETALL / FITXA D'UNA VENDA (QueryOne corregit!)
-router.get('/fitxa/:id', async (req, res) => {
+// 2. DETALL / FACTURA D'UNA VENDA (GET /vendes/detall/:id)
+router.get('/detall/:id', async (req, res) => {
   try {
     const id = req.params.id;
-
-    // Obtenir la capçalera de la venda
+    
     const venda = await db.queryOne(`
-      SELECT s.*, c.name AS client_name, c.email AS client_email 
-      FROM sales s 
-      LEFT JOIN customers c ON s.customer_id = c.id 
+      SELECT s.*, c.name AS client_name, c.email AS client_email
+      FROM sales s
+      LEFT JOIN customers c ON c.id = s.customer_id
       WHERE s.id = ?
     `, [id]);
 
-    if (!venda) {
-      return res.status(404).send('Venda no trobada');
-    }
+    if (!venda) return res.status(404).send('Venda no trobada');
 
-    // Obtenir les línies d'articles d'aquesta venda
-    const itemsRaw = await db.query(`
-      SELECT si.*, p.name AS product_name 
-      FROM sale_items si 
-      LEFT JOIN products p ON si.product_id = p.id 
+    // Opcional: llista d'ítems si tens una taula anomenada sale_items
+    const items = await db.query(`
+      SELECT si.*, p.name AS product_name
+      FROM sale_items si
+      LEFT JOIN products p ON p.id = si.product_id
       WHERE si.sale_id = ?
     `, [id]);
 
-    const items = db.table_to_json(itemsRaw, {
-      qty: 'number',
-      unit_price: 'number',
-      line_total: 'number'
-    });
-
     res.render('vendaFitxa', {
-      titol: `Detall de la Venda #${venda.id}`,
+      titol: 'Detall de la Venda',
       venda: {
-        id: venda.id,
-        payment_method: venda.payment_method,
-        total: parseFloat(venda.total).toFixed(2),
-        client_name: venda.client_name || 'Client Anònim',
-        client_email: venda.client_email || '',
-        sale_date: venda.sale_date ? new Date(venda.sale_date).toLocaleDateString('ca-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''
+        ...venda,
+        sale_date: venda.sale_date ? new Date(venda.sale_date).toLocaleString('ca-ES') : '',
+        total: parseFloat(venda.total).toFixed(2)
       },
-      items: items.map(item => ({
-        ...item,
-        unit_price: parseFloat(item.unit_price).toFixed(2),
-        line_total: parseFloat(item.line_total).toFixed(2)
-      }))
+      items
     });
   } catch (err) {
-    console.error('Error en obrir fitxa de la venda:', err);
+    console.error('Error en obrir fitxa de venda:', err);
     res.status(500).send('Error del servidor: ' + err.message);
   }
 });

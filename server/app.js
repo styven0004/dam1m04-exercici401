@@ -7,10 +7,8 @@ const MySQL = require('./utilsMySQL');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Detectar si estem al Proxmox (si és pm2)
 const isProxmox = !!process.env.PM2_HOME;
 
-// Iniciar connexió MySQL amb el nom de la teva base de dades
 const db = new MySQL();
 if (!isProxmox) {
   db.init({
@@ -30,12 +28,10 @@ if (!isProxmox) {
   });
 }
 
-// Static files & body parsers
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Disable cache
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
@@ -44,29 +40,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// Handlebars configuration
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'hbs');
-
-// CONFIGURACIÓ DEL LAYOUT GLOBAL AUTOMÀTIC
 app.set('view options', { layout: 'layouts/main' });
 
-// Registrar Helpers indispensables per a les teves vistes
 hbs.registerHelper('ifeq', (a, b) => a == b);
 hbs.registerHelper('plusOne', (val) => parseInt(val) + 1);
 hbs.registerHelper('any', () => new Date().getFullYear());
 
-// Registrar Partials (Menús, capçaleres, etc.)
 hbs.registerPartials(path.join(__dirname, 'views', 'partials'));
 
-// ---- DASHBOARD (Ruta arrel) ----
+// ---- DASHBOARD ----
 app.get('/', async (req, res) => {
   try {
     const anyActual = new Date().getFullYear();
     const avui = new Date().toISOString().slice(0, 10);
     const primerDiaMes = `2025-01-01`; 
 
-    // KPIs - Mitjançant mètodes queryOne adaptats
     const vendesAvuiRow = await db.queryOne(
       `SELECT COALESCE(SUM(total), 0) AS total, COUNT(*) AS num FROM sales WHERE DATE(sale_date) = ?`,
       [avui]
@@ -79,7 +69,6 @@ app.get('/', async (req, res) => {
       `SELECT COUNT(*) AS num FROM products WHERE stock <= 5 AND active = 1`
     );
 
-    // Últimes 5 vendes
     const ultVendesRaw = await db.query(`
       SELECT s.id, s.total, s.sale_date, c.name AS client
       FROM sales s LEFT JOIN customers c ON c.id = s.customer_id
@@ -92,7 +81,6 @@ app.get('/', async (req, res) => {
       total: v.total ? parseFloat(v.total).toFixed(2) : '0.00'
     })) : [];
 
-    // Top 5 productes més venuts
     const topProductesRaw = await db.query(`
       SELECT p.id, p.name, p.stock, COALESCE(SUM(si.qty), 0) AS total_venuts
       FROM products p
@@ -120,37 +108,33 @@ app.get('/', async (req, res) => {
       topProductes,
       any: anyActual
     });
-
   } catch (err) {
     console.error('Error al dashboard:', err);
     res.status(500).send('Error del servidor: ' + err.message);
   }
 });
 
-// ---- RUTES DELS CONTROLADORS INTERNS ----
-
-// Middleware per forçar que totes les sub-rutes heretin correctament el layout
+// ---- MIDDLEWARE LOCAL LAYOUT ----
 app.use((req, res, next) => {
   res.locals.layout = 'layouts/main';
   next();
 });
 
-// 1. CONTROLADORS ESPECÍFICS (Rutes estàtiques prioritàries)
+// ---- CONTROLADORS DE RUTES ----
+
+// 1. Enrutador CRUD Genèric
+const crudRouter = require('./routes/crud');
+app.use('/accions', crudRouter);
+
+// 2. Controladors Específics de secció
 const productesRouter = require('./routes/productes');
 app.use('/productes', productesRouter);
-app.use('/', productesRouter); 
 
 const clientsRouter = require('./routes/clients');
-app.use('/clients', clientsRouter);
-app.use('/', clientsRouter); 
+app.use('/clients', clientsRouter); // <-- S'AFAGEIX AIXÒ DE FORMA COMPLETA
 
 const vendesRouter = require('./routes/vendes');
-app.use('/vendes', vendesRouter);
-app.use('/', vendesRouter); 
-
-// 2. CONTROLADOR GENÈRIC CRUD (A baix de tot per evitar xocs de rutes dinàmiques)
-const crudRouter = require('./routes/crud');
-app.use('/', crudRouter);
+app.use('/vendes', vendesRouter);   // <-- S'AFAGEIX AIXÒ DE FORMA COMPLETA
 
 // Start server
 const httpServer = app.listen(port, () => {

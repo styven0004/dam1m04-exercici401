@@ -1,13 +1,11 @@
-<!-- LLISTAT CLIENTS -->
 <div class="flex-between mb-24">
   <div>
     <h2 style="font-family: 'Rajdhani', sans-serif; font-size: 22px; margin-bottom: 4px;">Clients</h2>
     <p class="text-muted" style="font-size: 14px;">{{total}} clients registrats</p>
   </div>
-  <a href="/clientAfegir" class="btn btn-primary">👤 Afegir client</a>
+  <a href="/accions/clients/afegir" class="btn btn-primary">👤 Afegir client</a>
 </div>
 
-<!-- Filtres -->
 <div class="card mb-24">
   <div class="card-body" style="padding: 16px 22px;">
     <form method="GET" action="/clients" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -31,7 +29,6 @@
   </div>
 </div>
 
-<!-- Taula -->
 <div class="card">
   <div class="table-wrapper">
     <table>
@@ -41,9 +38,9 @@
           <th>Nom</th>
           <th>Email</th>
           <th>Telèfon</th>
-          <th># Compres</th>
+          <th>Compres</th>
           <th>Total gastat</th>
-          <th>VIP</th>
+          <th>Tipus</th>
           <th>Accions</th>
         </tr>
       </thead>
@@ -52,8 +49,8 @@
         <tr>
           <td class="text-muted">#{{this.id}}</td>
           <td class="fw-bold">{{this.name}}</td>
-          <td class="text-muted">{{this.email}}</td>
-          <td class="text-muted">{{this.phone}}</td>
+          <td>{{this.email}}</td>
+          <td>{{this.phone}}</td>
           <td>{{this.num_compres}}</td>
           <td class="fw-bold">{{this.total_gastat}}€</td>
           <td>
@@ -64,8 +61,8 @@
             {{/if}}
           </td>
           <td style="display: flex; gap: 6px;">
-            <a href="/clientFitxa?id={{this.id}}" class="btn btn-ghost btn-sm">👁 Veure</a>
-            <a href="/clientEditar?id={{this.id}}" class="btn btn-ghost btn-sm">✏️ Editar</a>
+            <a href="/clients/detall/{{this.id}}" class="btn btn-ghost btn-sm">👁 Veure</a>
+            <a href="/clients/editar/{{this.id}}" class="btn btn-ghost btn-sm">✏️ Editar</a>
           </td>
         </tr>
         {{else}}
@@ -83,7 +80,6 @@
   </div>
 </div>
 
-<!-- Paginació -->
 {{#if totalPagines}}
 <div class="paginacio">
   {{#if paginaAnterior}}

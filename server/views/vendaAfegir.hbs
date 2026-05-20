@@ -1,4 +1,3 @@
-<!-- NOVA VENDA -->
 <div class="flex-between mb-24">
   <div>
     <h2 style="font-family: 'Rajdhani', sans-serif; font-size: 22px; margin-bottom: 4px;">🛒 Nova Venda</h2>
@@ -7,11 +6,10 @@
   <a href="/vendes" class="btn btn-ghost">← Tornar</a>
 </div>
 
-<form id="formVenda" method="POST" action="/create" novalidate>
+<form id="formVenda" method="POST" action="/accions/vendes/afegir" novalidate>
   <input type="hidden" name="taula" value="vendes">
 
   <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; align-items: start;">
-    <!-- Dades generals -->
     <div class="card">
       <div class="card-header"><span class="card-title">📋 Dades generals</span></div>
       <div class="card-body">
@@ -29,42 +27,36 @@
         <div class="form-group">
           <label class="form-label" for="payment_method">Mètode de pagament</label>
           <select id="payment_method" name="payment_method" class="form-control">
-            <option value="Targeta">Targeta</option>
-            <option value="Efectiu">Efectiu</option>
-            <option value="Bizum">Bizum</option>
-            <option value="Transferència">Transferència</option>
+            <option value="Efectiu">💵 Efectiu</option>
+            <option value="Targeta" selected>💳 Targeta</option>
+            <option value="Transferència">🏦 Transferència</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="sale_date">Data de venda</label>
+          <label class="form-label" for="sale_date">Data i hora</label>
           <input type="datetime-local" id="sale_date" name="sale_date" class="form-control" value="{{dataAvui}}">
         </div>
 
-        <div style="border-top: 1px solid var(--border-color); padding-top: 16px;">
-          <div class="text-muted" style="font-size: 12px; margin-bottom: 4px;">Total calculat</div>
-          <div id="totalCalculat" style="font-family: 'Rajdhani', sans-serif; font-size: 32px; font-weight: 700; color: var(--accent);">0.00€</div>
-          <input type="hidden" name="total" id="totalHidden" value="0">
+        <div style="border-top: 1px solid var(--border-color); margin-top: 20px; padding-top: 16px; text-align: center;">
+          <div class="text-muted" style="font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">Total Venda</div>
+          <div id="totalCalculat" style="font-family: 'Rajdhani', sans-serif; font-size: 36px; font-weight: 700; color: var(--accent);">0.00€</div>
+          <input type="hidden" id="totalHidden" name="total" value="0.00">
         </div>
       </div>
     </div>
 
-    <!-- Línies de venda -->
     <div class="card">
-      <div class="card-header">
-        <span class="card-title">🎮 Línies de venda</span>
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span class="card-title">🎮 Línies de la venda</span>
         <button type="button" class="btn btn-secondary btn-sm" onclick="afegirLinia()">➕ Afegir línia</button>
       </div>
-      <div class="card-body">
-        <div id="linies">
-          <!-- Les línies s'afegiran dinàmicament -->
-        </div>
-        <div id="errLinies" class="error-msg">Has d'afegir almenys un producte.</div>
-
-        <div class="form-actions" style="margin-top: 24px;">
-          <button type="submit" class="btn btn-primary">💾 Crear venda</button>
-          <a href="/vendes" class="btn btn-ghost">Cancel·lar</a>
-        </div>
+      <div class="card-body" id="contenidorLinies" style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="error-msg" id="errLinies" style="margin-bottom: 10px;">Has d'afegir com a mínim un producte amb quantitat vàlida.</div>
+      </div>
+      <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border-color); padding: 16px 22px;">
+        <a href="/vendes" class="btn btn-ghost">Cancel·lar</a>
+        <button type="submit" class="btn btn-primary">💾 Registrar Venda</button>
       </div>
     </div>
   </div>
@@ -72,43 +64,74 @@
 
 <script>
   const productes = {{{productesJSON}}};
-  let lineaIndex = 0;
+  let liniaIdx = 0;
 
   function afegirLinia() {
+    document.getElementById('errLinies').classList.remove('visible');
+    liniaIdx++;
+
+    let options = '<option value="">— Selecciona producte —</option>';
+    productes.forEach(p => {
+      options += `<option value="${p.id}">[Stock: ${p.stock}] ${p.name} — ${p.price}€</option>`;
+    });
+
     const div = document.createElement('div');
     div.className = 'linia-venda';
-    div.dataset.idx = lineaIndex;
-    div.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; align-items: end; margin-bottom: 12px; padding: 12px; background: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color);';
+    div.id = 'linia_' + liniaIdx;
+    div.dataset.idx = liniaIdx;
+    div.style = 'display: grid; grid-template-columns: 3fr 1fr 1fr 1fr auto; gap: 10px; align-items: center; border-bottom: 1px dashed var(--border-color); padding-bottom: 12px;';
 
     div.innerHTML = `
-      <div class="form-group" style="margin:0;">
-        <label class="form-label">Producte</label>
-        <select name="linies[${lineaIndex}][product_id]" class="form-control sel-producte" onchange="actualitzarPreu(this, ${lineaIndex})" required>
-          <option value="">— Selecciona —</option>
-          ${productes.map(p => `<option value="${p.id}" data-preu="${p.price}" data-stock="${p.stock}">${p.name} (${p.price}€)</option>`).join('')}
+      <div>
+        <select name="lines[${liniaIdx}][product_id]" id="prod_${liniaIdx}" class="form-control" onchange="seleccionarProducte(${liniaIdx})" required>
+          ${options}
         </select>
       </div>
-      <div class="form-group" style="margin:0;">
-        <label class="form-label">Preu unit.</label>
-        <input type="number" name="linies[${lineaIndex}][unit_price]" id="preu_${lineaIndex}" class="form-control" value="0" step="0.01" min="0" readonly style="background: var(--bg-primary);">
+      <div>
+        <input type="number" name="lines[${liniaIdx}][price]" id="preu_${liniaIdx}" class="form-control" placeholder="0.00" readonly style="background: #f4f4f6;">
       </div>
-      <div class="form-group" style="margin:0;">
-        <label class="form-label">Quantitat</label>
-        <input type="number" name="linies[${lineaIndex}][qty]" id="qty_${lineaIndex}" class="form-control" value="1" min="1" oninput="recalcularTotal()">
+      <div>
+        <input type="number" name="lines[${liniaIdx}][qty]" id="qty_${liniaIdx}" class="form-control" value="1" min="1" oninput="canviQuantitat(${liniaIdx})" required>
       </div>
-      <button type="button" onclick="eliminarLinia(this)" style="margin-bottom: 1px;" class="btn btn-danger btn-sm">✕</button>
-      <input type="hidden" name="linies[${lineaIndex}][line_total]" id="total_${lineaIndex}" value="0">
+      <div>
+        <input type="text" id="total_${liniaIdx}" class="form-control" value="0.00" readonly style="background: #f4f4f6; font-weight: 600;">
+      </div>
+      <div>
+        <button type="button" class="btn btn-danger btn-sm" onclick="eliminarLinia(this)">🗑</button>
+      </div>
     `;
 
-    document.getElementById('linies').appendChild(div);
-    lineaIndex++;
+    document.getElementById('contenidorLinies').appendChild(div);
+  }
+
+  function seleccionarProducte(idx) {
+    const sel = document.getElementById('prod_' + idx);
+    const pId = sel.value;
+    const pData = productes.find(p => p.id == pId);
+
+    const priceInput = document.getElementById('preu_' + idx);
+    const qtyInput = document.getElementById('qty_' + idx);
+
+    if (pData) {
+      priceInput.value = pData.price;
+      qtyInput.max = pData.stock;
+      if (parseInt(qtyInput.value) > pData.stock) qtyInput.value = pData.stock;
+    } else {
+      priceInput.value = '';
+      qtyInput.removeAttribute('max');
+    }
     recalcularTotal();
   }
 
-  function actualitzarPreu(sel, idx) {
-    const opt = sel.options[sel.selectedIndex];
-    const preu = parseFloat(opt.dataset.preu) || 0;
-    document.getElementById('preu_' + idx).value = preu.toFixed(2);
+  function canviQuantitat(idx) {
+    const qtyInput = document.getElementById('qty_' + idx);
+    const sel = document.getElementById('prod_' + idx);
+    const pData = productes.find(p => p.id == sel.value);
+
+    if (pData && parseInt(qtyInput.value) > pData.stock) {
+      alert('No hi ha prou stock. Stock màxim: ' + pData.stock);
+      qtyInput.value = pData.stock;
+    }
     recalcularTotal();
   }
 
@@ -147,12 +170,27 @@
       document.getElementById('errLinies').classList.add('visible');
       valid = false;
     } else {
-      document.getElementById('errLinies').classList.remove('visible');
+      linies.forEach(div => {
+        const idx = div.dataset.idx;
+        const prod = document.getElementById('prod_' + idx);
+        const qty = document.getElementById('qty_' + idx);
+        if (!prod.value || !qty.value || parseInt(qty.value) <= 0) {
+          prod.classList.add('error');
+          qty.classList.add('error');
+          valid = false;
+        }
+      });
     }
 
     if (valid) this.submit();
   });
 
-  // Afegir una línia inicial
-  afegirLinia();
+  document.getElementById('customer_id').addEventListener('change', function() {
+    this.classList.remove('error');
+    document.getElementById('err-customer_id').classList.remove('visible');
+  });
+
+  if (document.querySelectorAll('.linia-venda').length === 0) {
+    afegirLinia();
+  }
 </script>
